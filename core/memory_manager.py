@@ -3,38 +3,56 @@ Memory Manager for Agentcore Demo
 Handles both short-term and long-term memory operations
 """
 
-import chromadb
-from chromadb.config import Settings
+import faiss
+import numpy as np
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Optional
 import json
 from datetime import datetime
 import tiktoken
+import pickle
+import os
 
 
 class MemoryManager:
-    def __init__(self, stm_max_tokens: int = 2000, collection_name: str = "knight_memories"):
+    def __init__(self, stm_max_tokens: int = 200, collection_name: str = "knight_memories"):
         """Initialize memory management system"""
         self.stm_max_tokens = stm_max_tokens
         self.short_term_memory = []
         
-        # Initialize ChromaDB for long-term memory
-        self.chroma_client = chromadb.Client(Settings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory="./chroma_db"
-        ))
-        
-        # Create or get collection
-        self.ltm_collection = self.chroma_client.get_or_create_collection(
-            name=collection_name,
-            metadata={"description": "Knight of Seven Kingdoms memories"}
-        )
-        
-        # Initialize embedding model
+        # Initialize FAISS for long-term memory
+        self.collection_name = collection_name
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.embedding_dim = 384  # Dimension for all-MiniLM-L6-v2
+        
+        # Initialize FAISS index
+        self.ltm_index = faiss.IndexFlatL2(self.embedding_dim)
+        self.ltm_metadata = []  # Store metadata separately
+        
+        # Load existing memories if available
+        self._load_ltm()
         
         # Token counter
         self.encoding = tiktoken.get_encoding("cl100k_base")
+    
+    def _load_ltm(self):
+        """Load long-term memory from disk"""
+        index_path = f"./{self.collection_name}_index.faiss"
+        metadata_path = f"./{self.collection_name}_metadata.pkl"
+        
+        if os.path.exists(index_path) and os.path.exists(metadata_path):
+            self.ltm_index = faiss.read_index(index_path)
+            with open(metadata_path, 'rb') as f:
+                self.ltm_metadata = pickle.load(f)
+    
+    def _save_ltm(self):
+        """Save long-term memory to disk"""
+        index_path = f"./{self.collection_name}_index.faiss"
+        metadata_path = f"./{self.collection_name}_metadata.pkl"
+        
+        faiss.write_index(self.ltm_index, index_path)
+        with open(metadata_path, 'wb') as f:
+            pickle.dump(self.ltm_metadata, f)
     
     def count_tokens(self, text: str) -> int:
         """Count tokens in text"""
@@ -65,39 +83,50 @@ class MemoryManager:
     
     def add_to_ltm(self, content: str, category: str, importance: int = 5, metadata: Optional[Dict] = None):
         """Add memory to long-term storage"""
-        memory_id = f"{category}_{datetime.now().timestamp()}"
+        # Generate embedding
+        embedding = self.embedding_model.encode([content])[0]
         
+        # Add to FAISS index
+        self.ltm_index.add(np.array([embedding], dtype=np.float32))
+        
+        # Store metadata
         full_metadata = {
+            "content": content,
             "category": category,
             "importance": importance,
             "timestamp": datetime.now().isoformat(),
             **(metadata or {})
         }
+        self.ltm_metadata.append(full_metadata)
         
-        self.ltm_collection.add(
-            documents=[content],
-            metadatas=[full_metadata],
-            ids=[memory_id]
-        )
+        # Save to disk
+        self._save_ltm()
     
     def retrieve_from_ltm(self, query: str, n_results: int = 3, category: Optional[str] = None) -> List[Dict]:
         """Retrieve relevant memories from long-term storage"""
-        where_filter = {"category": category} if category else None
+        if self.ltm_index.ntotal == 0:
+            return []
         
-        results = self.ltm_collection.query(
-            query_texts=[query],
-            n_results=n_results,
-            where=where_filter
+        # Generate query embedding
+        query_embedding = self.embedding_model.encode([query])[0]
+        
+        # Search in FAISS
+        distances, indices = self.ltm_index.search(
+            np.array([query_embedding], dtype=np.float32), 
+            min(n_results, self.ltm_index.ntotal)
         )
         
+        # Retrieve metadata
         memories = []
-        if results['documents'] and results['documents'][0]:
-            for i, doc in enumerate(results['documents'][0]):
-                memories.append({
-                    "content": doc,
-                    "metadata": results['metadatas'][0][i],
-                    "distance": results['distances'][0][i]
-                })
+        for i, idx in enumerate(indices[0]):
+            if idx < len(self.ltm_metadata):
+                metadata = self.ltm_metadata[idx]
+                if category is None or metadata.get("category") == category:
+                    memories.append({
+                        "content": metadata["content"],
+                        "metadata": metadata,
+                        "distance": float(distances[0][i])
+                    })
         
         return memories
     
@@ -120,7 +149,7 @@ class MemoryManager:
     def get_memory_stats(self) -> Dict:
         """Get memory statistics"""
         stm_tokens = sum(self.count_tokens(msg["content"]) for msg in self.short_term_memory)
-        ltm_count = self.ltm_collection.count()
+        ltm_count = self.ltm_index.ntotal
         
         return {
             "stm_messages": len(self.short_term_memory),

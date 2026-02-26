@@ -40,7 +40,7 @@ def main():
     
     # Initialize memory manager
     print("Initializing memory systems...")
-    stm_max_tokens = int(os.getenv("STM_MAX_TOKENS", 2000))
+    stm_max_tokens = int(os.getenv("STM_MAX_TOKENS", 200))
     collection_name = os.getenv("LTM_COLLECTION_NAME", "knight_memories")
     
     memory_manager = MemoryManager(

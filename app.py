@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 # Initialize memory and agent
 memory_manager = MemoryManager(
-    stm_max_tokens=int(os.getenv("STM_MAX_TOKENS", 2000)),
+    stm_max_tokens=int(os.getenv("STM_MAX_TOKENS", 200)),
     collection_name=os.getenv("LTM_COLLECTION_NAME", "knight_memories")
 )
 agent = KnightAgent(memory_manager)
