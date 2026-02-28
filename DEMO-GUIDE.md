@@ -4,6 +4,31 @@
 ## Overview
 This demo showcases a dual-memory architecture for AI agents using the "Knight of the Seven Kingdoms" persona.
 
+## Visual Memory Indicators 🎨
+
+The web interface features **color-coded text** to visually distinguish between memory sources:
+
+- **🔵 Blue Text** = Short-Term Memory (STM)
+  - Recent conversation context
+  - Immediate responses based on current dialogue
+  - Disappears when STM overflows (after ~3-4 exchanges with 200 token limit)
+
+- **🟢 Green Text** = Long-Term Memory (LTM)
+  - Core memories retrieved via semantic search
+  - Persistent knowledge about Ser Duncan's past
+  - Always available regardless of conversation length
+
+**Why This Matters:**
+- Makes the dual-memory architecture immediately visible to the audience
+- Clearly demonstrates when each memory system is being used
+- Shows the complementary nature of STM and LTM in real-time
+- Perfect for educational demonstrations and presentations
+
+**Legend Display:**
+A color legend appears at the top of the chat interface showing:
+- Blue box: "STM (Short-Term Memory - Recent Context)"
+- Green box: "LTM (Long-Term Memory - Core Memories)"
+
 ## Key Concepts
 
 ### 1. Short-Term Memory (STM)
@@ -87,25 +112,30 @@ Limitations: May miss exact matches, requires good embeddings
 ### Scenario 1: STM in Action - Conversation Continuity
 **Goal**: Demonstrate how STM maintains recent context and handles overflow
 
+**Visual Cue**: Watch for **blue text** (STM) in responses showing recent context
+
 **Step-by-Step:**
 ```
 1. User: "Who are you?"
    → Agent: "I am Ser Duncan the Tall, a hedge knight..."
+   → Blue text: Immediate response from conversation context
    → STM: 1 message (user) + 1 message (agent) ≈ 60 tokens
    → Stats: STM: 60/200 tokens, LTM: 20 memories
 
 2. User: "What did you just tell me?"
    → Agent: References the introduction from STM
+   → Blue text: Shows agent remembers recent conversation
    → STM: 4 messages ≈ 120 tokens
-   → Shows: Agent remembers recent conversation
 
 3. User: "Tell me more about being a hedge knight"
    → Agent: Responds with details
+   → Blue text: Conversational response
    → STM: 6 messages ≈ 180 tokens
    → Shows: Approaching capacity
 
 4. User: "Where do you travel?"
    → Agent: Responds about traveling the Seven Kingdoms
+   → Blue text: Recent context response
    → STM: 8 messages ≈ 220 tokens
    → Oldest messages start being removed
    → Shows: Automatic memory management (overflow!)
@@ -116,7 +146,7 @@ Limitations: May miss exact matches, requires good embeddings
    → Demonstrates why LTM is essential
 ```
 
-**Key Observation**: With only 200 tokens, overflow happens quickly (after 3-4 exchanges). Type `stats` after each message to watch the dramatic overflow behavior!
+**Key Observation**: With only 200 tokens, overflow happens quickly (after 3-4 exchanges). Watch the blue text disappear as STM overflows! Type `stats` after each message to watch the dramatic overflow behavior!
 
 ### Scenario 2: LTM in Action - Knowledge Recall
 **Goal**: Show LTM retrieving relevant memories based on semantic similarity
@@ -229,6 +259,29 @@ Limitations: May miss exact matches, requires good embeddings
 ```
 
 **Key Observation**: LTM understands meaning, not just exact words
+
+## Visual Memory Indicators
+
+The web interface now includes **color-coded text** to visually distinguish between STM and LTM sources:
+
+- **Blue text** = Information from Short-Term Memory (STM)
+  - Recent conversation context
+  - Immediate responses based on current dialogue
+  - Disappears when STM is cleared or overflows
+
+- **Green text** = Information from Long-Term Memory (LTM)
+  - Core memories retrieved via semantic search
+  - Persistent knowledge about Ser Duncan's past
+  - Always available regardless of conversation length
+
+**Legend Display:**
+- A color legend appears at the top of the chat interface
+- Blue box: "STM (Short-Term Memory - Recent Context)"
+- Green box: "LTM (Long-Term Memory - Core Memories)"
+
+This visual distinction makes it immediately clear to the audience which memory system is being used for each part of the response, making the demo more impactful and educational.
+
+---
 
 ## Technical Architecture
 

@@ -37,13 +37,17 @@ def chat():
             return jsonify({'error': 'No message provided'}), 400
         
         # Process message
-        response = agent.process_message(user_message)
+        response_data = agent.process_message(user_message)
         
         # Get memory stats
         stats = agent.get_memory_stats()
         
         return jsonify({
-            'response': response,
+            'response': response_data['response'],
+            'stm_text': response_data.get('stm_text', ''),
+            'ltm_text': response_data.get('ltm_text', ''),
+            'has_stm': response_data.get('has_stm', False),
+            'has_ltm': response_data.get('has_ltm', False),
             'stats': stats
         })
     

@@ -92,6 +92,46 @@
             color: #333;
         }
 
+        .message.assistant .stm-text {
+            color: #007bff;
+            font-weight: 500;
+        }
+
+        .message.assistant .ltm-text {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .memory-legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-color.stm {
+            background: #007bff;
+        }
+
+        .legend-color.ltm {
+            background: #28a745;
+        }
+
         .message.system {
             background: #ffc107;
             color: #333;
@@ -210,6 +250,16 @@
 
         <div class="main-content">
             <div class="chat-container">
+                <div class="memory-legend">
+                    <div class="legend-item">
+                        <div class="legend-color stm"></div>
+                        <span>STM (Short-Term Memory - Recent Context)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color ltm"></div>
+                        <span>LTM (Long-Term Memory - Core Memories)</span>
+                    </div>
+                </div>
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="input-area">
                     <input type="text" id="userInput" placeholder="Speak with Ser Duncan..." />
@@ -252,11 +302,33 @@
     <script>
         let isLoading = false;
 
-        function addMessage(role, content) {
+        function addMessage(role, content, stmText = '', ltmText = '', hasStm = false, hasLtm = false) {
             const messagesDiv = document.getElementById('chatMessages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
-            messageDiv.textContent = content;
+            
+            if (role === 'assistant' && (hasStm || hasLtm)) {
+                // Create colored spans for STM and LTM text
+                if (hasStm && stmText) {
+                    const stmSpan = document.createElement('span');
+                    stmSpan.className = 'stm-text';
+                    stmSpan.textContent = stmText;
+                    messageDiv.appendChild(stmSpan);
+                }
+                
+                if (hasLtm && ltmText) {
+                    if (hasStm) {
+                        messageDiv.appendChild(document.createTextNode(' '));
+                    }
+                    const ltmSpan = document.createElement('span');
+                    ltmSpan.className = 'ltm-text';
+                    ltmSpan.textContent = ltmText;
+                    messageDiv.appendChild(ltmSpan);
+                }
+            } else {
+                messageDiv.textContent = content;
+            }
+            
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
@@ -288,7 +360,7 @@
                 });
 
                 const data = await response.json();
-                addMessage('assistant', data.response);
+                addMessage('assistant', data.response, data.stm_text, data.ltm_text, data.has_stm, data.has_ltm);
                 updateStats(data.stats);
             } catch (error) {
                 addMessage('system', 'Error: ' + error.message);
